@@ -6,37 +6,31 @@ def run_monitor():
     file_name = '台股-4533協易機-價量分析.csv'
     
     try:
-        # 1. 讀取檔案，並將 Excel 常見錯誤字眼視為缺失值 (NaN)
+        # 1. 讀取檔案，將 Excel 常見錯誤字眼視為 NaN
         df = pd.read_csv(file_name, encoding='utf-8-sig', na_values=['#DIV/0!', '#N/A', '', ' '])
         
-        # 2. 清理：刪除完全空白的列，並修剪欄位空格
-        df = df.dropna(how='all')
+        # 2. 清理：去掉欄位空格
         df.columns = df.columns.str.strip()
         
-        # 3. 抓取「最後一筆有數據」的紀錄
-        latest_data = df.iloc[-1]
-        
-        # 4. 資料轉換與清理 (將無法轉換的變成 0)
-        def clean_num(val):
-            try:
-                v = float(val)
-                return 0 if np.isnan(v) else v
-            except:
-                return 0
+        # 3. 【核心修正】過濾掉所有「收盤價」是空的或是 0 的無效行
+        # 這樣機器人就會自動忽略你預留的空白表格
+        valid_df = df.dropna(subset=['收盤價'])
+        valid_df = valid_df[valid_df['收盤價'] != 0]
 
+        if valid_df.empty:
+            print("❌ 錯誤：CSV 檔案中找不到任何有效的收盤價數據！")
+            return
+
+        # 4. 抓取「最後一筆有效」紀錄
+        latest_data = valid_df.iloc[-1]
+        
         date = latest_data.get('日期', '未知日期')
-        close_price = clean_num(latest_data.get('收盤價'))
-        vol_ratio = clean_num(latest_data.get('努力倍率 (Vol Ratio)'))
-        intent_score = clean_num(latest_data.get('意圖分數 (Close Pos %)'))
+        close_price = float(latest_data.get('收盤價', 0))
+        vol_ratio = float(latest_data.get('努力倍率 (Vol Ratio)', 0))
+        intent_score = float(latest_data.get('意圖分數 (Close Pos %)', 0))
         status = str(latest_data.get('狀態', '無狀態'))
 
         print(f"\n--- 🐊 詩織機器人 盤後診斷報告 ({date}) ---")
-        
-        # 如果收盤價是 0，代表這行資料可能還沒填好
-        if close_price == 0:
-            print("⚠️ 警告：最後一行資料似乎不完整，請檢查 CSV 內容！")
-            return
-
         print(f"今日收盤：{close_price} 元")
         print(f"努力倍率：{vol_ratio:.2f}x")
         print(f"意圖分數：{intent_score:.2f}")
