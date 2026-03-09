@@ -1,0 +1,28 @@
+name: 🐊 大鱷足跡每日監控
+
+# 1. 觸發條件
+on:
+  schedule:
+    # 每天下午 14:30 執行 (國際標準時 06:30 + 8小時 = 台灣時間 14:30)
+    - cron: '30 6 * * 1-5'
+  workflow_dispatch: # 這是「手動開關」，讓你隨時想測就能測
+
+# 2. 執行的內容
+jobs:
+  build:
+    runs-on: ubuntu-latest # 使用雲端虛擬主機
+
+    steps:
+      - name: 📥 複製倉庫檔案
+        uses: actions/checkout@v3
+
+      - name: 🐍 安裝 Python 環境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 📦 安裝必要套件
+        run: pip install pandas
+
+      - name: 🐊 執行 VSA 監工腳本
+        run: python vsa_monitor.py
