@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 
 def run_monitor():
-    file_name = '台股-4533-協易機.csv'
+    file_name = '台股-4533-協易機-價量分析.csv'
     
     try:
         # 1. 嘗試用不同的編碼讀取 (解決 Windows 產生的 CSV 編碼問題)
