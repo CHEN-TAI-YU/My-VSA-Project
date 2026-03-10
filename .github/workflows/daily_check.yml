@@ -22,7 +22,7 @@ jobs:
           python-version: '3.9'
 
       - name: 📦 安裝必要套件
-        run: pip install pandas
+        run: pip install pandas requests
 
       - name: 🐊 執行 VSA 監工腳本
         env:
