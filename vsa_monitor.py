@@ -3,14 +3,13 @@ import sys
 import numpy as np
 import re
 
-def clean_currency(value):
-    """將帶有 $、, 或空格的字串轉為純數字"""
+def clean_value(value):
+    """清理包含 $、%、逗號或空格的字串"""
     if pd.isna(value) or value == '':
         return 0.0
-    # 如果已經是數字就直接回傳
     if isinstance(value, (int, float)):
         return float(value)
-    # 將非數字、非小數點的字元通通拿掉 (例如 $ 或 , 或 空格)
+    # 去除所有非數字、非小數點的字元
     cleaned = re.sub(r'[^\d.]', '', str(value))
     try:
         return float(cleaned)
@@ -24,29 +23,33 @@ def run_monitor():
         # 1. 讀取檔案
         df = pd.read_csv(file_name, encoding='utf-8-sig', na_values=['#DIV/0!', '#N/A', '', ' '])
         
-        # 2. 清理：去掉欄位空格
-        df.columns = df.columns.str.strip()
-        
-        # 3. 使用自定義的 clean_currency 函數來清理數據列
-        for col in ['收盤價', '努力倍率 (Vol Ratio)', '意圖分數 (Close Pos %)']:
-            if col in df.columns:
-                df[col] = df[col].apply(clean_currency)
-        
-        # 4. 過濾掉無效行
-        valid_df = df.dropna(subset=['收盤價'])
-        valid_df = valid_df[valid_df['收盤價'] > 0]
+        # 2. 清理欄位名稱：移除換行符號、空格
+        df.columns = df.columns.str.replace('\n', ' ').str.strip()
+        print(f"✅ 偵測到欄位：{list(df.columns)}")
 
-        if valid_df.empty:
-            print("❌ 錯誤：CSV 檔案中找不到任何有效的收盤價數據！")
+        # 3. 過濾掉無效行：必須要有「日期」且「收盤價」不是 0
+        df = df[df['日期'].notna()]
+        
+        # 4. 定義要清理的目標欄位 (根據你的 CSV 標頭)
+        target_cols = {
+            'close': '收盤價',
+            'vol_ratio': '努力倍率 (Vol Ratio)',
+            'intent': '意圖分數 (Close Pos %)'
+        }
+
+        # 5. 抓取最後一筆有效紀錄
+        # 我們先找到最後一行有「日期」的，再往回找直到有「收盤價」
+        valid_rows = df[df['收盤價'].notna()]
+        if valid_rows.empty:
+            print("❌ 錯誤：找不到任何包含有效數據的行！")
             return
-
-        # 5. 抓取「最後一筆有效」紀錄
-        latest_data = valid_df.iloc[-1]
+            
+        latest_data = valid_rows.iloc[-1]
         
         date = latest_data.get('日期', '未知日期')
-        close_price = latest_data.get('收盤價', 0)
-        vol_ratio = latest_data.get('努力倍率 (Vol Ratio)', 0)
-        intent_score = latest_data.get('意圖分數 (Close Pos %)', 0)
+        close_price = clean_value(latest_data.get(target_cols['close']))
+        vol_ratio = clean_value(latest_data.get(target_cols['vol_ratio']))
+        intent_score = clean_value(latest_data.get(target_cols['intent']))
         status = str(latest_data.get('狀態', '無狀態'))
 
         print(f"\n--- 🐊 詩織機器人 盤後診斷報告 ({date}) ---")
@@ -55,6 +58,7 @@ def run_monitor():
         print(f"意圖分數：{intent_score:.2f}")
         print(f"目前狀態：{status}")
 
+        # 邏輯判斷
         if close_price <= 30.0:
             print("🚨 注意：已跌破 30.0 元止損位，請執行品管退料程序！")
         elif close_price >= 33.8:
