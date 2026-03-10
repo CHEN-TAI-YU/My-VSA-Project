@@ -1,33 +1,52 @@
 import pandas as pd
 import sys
 import numpy as np
+import re
+
+def clean_currency(value):
+    """將帶有 $、, 或空格的字串轉為純數字"""
+    if pd.isna(value) or value == '':
+        return 0.0
+    # 如果已經是數字就直接回傳
+    if isinstance(value, (int, float)):
+        return float(value)
+    # 將非數字、非小數點的字元通通拿掉 (例如 $ 或 , 或 空格)
+    cleaned = re.sub(r'[^\d.]', '', str(value))
+    try:
+        return float(cleaned)
+    except:
+        return 0.0
 
 def run_monitor():
     file_name = '台股-4533協易機-價量分析.csv'
     
     try:
-        # 1. 讀取檔案，將 Excel 常見錯誤字眼視為 NaN
+        # 1. 讀取檔案
         df = pd.read_csv(file_name, encoding='utf-8-sig', na_values=['#DIV/0!', '#N/A', '', ' '])
         
         # 2. 清理：去掉欄位空格
         df.columns = df.columns.str.strip()
         
-        # 3. 【核心修正】過濾掉所有「收盤價」是空的或是 0 的無效行
-        # 這樣機器人就會自動忽略你預留的空白表格
+        # 3. 使用自定義的 clean_currency 函數來清理數據列
+        for col in ['收盤價', '努力倍率 (Vol Ratio)', '意圖分數 (Close Pos %)']:
+            if col in df.columns:
+                df[col] = df[col].apply(clean_currency)
+        
+        # 4. 過濾掉無效行
         valid_df = df.dropna(subset=['收盤價'])
-        valid_df = valid_df[valid_df['收盤價'] != 0]
+        valid_df = valid_df[valid_df['收盤價'] > 0]
 
         if valid_df.empty:
             print("❌ 錯誤：CSV 檔案中找不到任何有效的收盤價數據！")
             return
 
-        # 4. 抓取「最後一筆有效」紀錄
+        # 5. 抓取「最後一筆有效」紀錄
         latest_data = valid_df.iloc[-1]
         
         date = latest_data.get('日期', '未知日期')
-        close_price = float(latest_data.get('收盤價', 0))
-        vol_ratio = float(latest_data.get('努力倍率 (Vol Ratio)', 0))
-        intent_score = float(latest_data.get('意圖分數 (Close Pos %)', 0))
+        close_price = latest_data.get('收盤價', 0)
+        vol_ratio = latest_data.get('努力倍率 (Vol Ratio)', 0)
+        intent_score = latest_data.get('意圖分數 (Close Pos %)', 0)
         status = str(latest_data.get('狀態', '無狀態'))
 
         print(f"\n--- 🐊 詩織機器人 盤後診斷報告 ({date}) ---")
