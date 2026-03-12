@@ -75,12 +75,14 @@ def analyze_stock(stock_id, stock_name, stop_loss, buy_point):
         )
 
         # 專屬防線提醒
-        if close <= stop_loss:
-            report += f"🚨 注意：已跌破 {stop_loss} 元止損位！\n"
-        elif close >= buy_point:
-            report += f"🚀 突破：已站上 {buy_point} 元關鍵防線！\n"
-        else:
-            report += "☕ 觀察：安全區間內，繼續喝紅茶。\n"
+        if close <= stop_loss: # 止損邏輯
+            report += f"🚨 注意：已跌破 {stop_loss} 元止損位！請執行退料流程。\n"
+        elif close >= take_profit: # 止盈邏輯
+            report += f"🎯 達標：已抵達 {take_profit} 元止盈目標！收割大鱷果實！🚀🚀🚀\n"
+        elif close >= buy_point: # 進單或加倉邏輯
+            report += f"🚀 突破：已站上 {buy_point} 元關鍵防線！大鱷正往目標前進。\n"
+        else: # 震盪時間邏輯
+            report += "☕ 觀察：目前在安全區間內巡航，繼續喝紅茶。\n"
 
         return report
 
@@ -92,9 +94,14 @@ def run_monitor():
     
     # 建立你想監控的清單 (台股代號後加上 .TW 代表上市，.TWO 代表上櫃)
     # 協易機是上櫃(TWO)，神達是上市(TW)
+    # 建立監控清單 (新增了 'tp' 欄位作為止盈價位)
     watchlist = [
-        {"id": "4533.TWO", "name": "協易機", "stop": 30.0, "buy": 33.8},
-        {"id": "3706.TW", "name": "神達", "stop": 81.1, "buy": 82.3}
+        {"id": "4533.TWO", "name": "協易機", "stop": 30.0, "buy": 33.8, "tp": 41.85},
+        {"id": "3706.TW", "name": "神達", "stop": 81.1, "buy": 82.3, "tp": 92.8}
+        {"id": "3576.TW", "name": "聯合再生", "stop": 19.7, "buy": 15.0, "tp": 26.7}
+        {"id": "4960.TW", "name": "誠美材", "stop": 17.1, "buy": 16.0, "tp": 26}
+        # 如果要增加第三檔股票，就在下面多加一行：
+        # {"id": "XXXX.TW", "name": "新標的", "stop": 0.0, "buy": 0.0, "tp": 0.0}
     ]
 
     final_report = f"\n--- 🐊 詩織機器人 盤後自動診斷 ---\n"
