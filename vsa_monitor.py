@@ -30,17 +30,34 @@ def find_column(df, keyword):
             return col
     return None
 
+def get_vsa_status(g, h, i):
+    """泰宇的 VSA 大鱷感測器 V2.1 核心大腦"""
+    if g > 1.2 and h > 0.03 and i > 0.7:
+        return "🚀 【買入/追擊】大鱷表態，補齊第 2 張單！"
+    elif i > 0.8 and g > 0.6 and h > 0.02:
+        return "📈 【強勢】主力拉升中，持股續抱！"
+    elif g < 0.25 and h < 0.015 and i > 0.75:
+        return "🟢 【買入/潛伏】完美地基，首單 1 張進場。"
+    elif g < 0.6 and h < 0.025 and i > 0.5:
+        return "🟡 【持股/監控】安靜累積，耐心等待訊號。"
+    elif i <= 0.15 and h > 0.02:
+        return "⚠️ 【警戒】高檔遇阻，供應湧現！"
+    elif i < 0.3 and h > 0.03:
+        return "🔴 【撤離/止損】結構崩塌，全數出清！"
+    else:
+        return "⚪ 【觀望】多空拉鋸，結構調整中"
+
 def run_monitor():
     file_name = '台股-4533協易機-價量分析.csv'
     try:
         df = pd.read_csv(file_name, encoding='utf-8-sig', na_values=['#DIV/0!', '#N/A', '', ' '])
         
-        # 1. 抓取關鍵欄位
+        # 1. 抓取關鍵欄位 (新增 G, H, I 的抓取)
         col_close = find_column(df, '收盤價')
-        col_vol = find_column(df, '努力')
-        col_intent = find_column(df, '意圖')
-        col_status = find_column(df, '狀態')
-
+        col_g = find_column(df, '努力') # G欄：對應 Excel 的努力倍率
+        col_h = find_column(df, '價格') # H欄：對應 Excel 的價差幅度
+        col_i = find_column(df, '意圖') # I欄：對應 Excel 的收盤位置
+        
         # 2. 過濾有效數據
         valid_df = df[df[col_close].notna()]
         valid_df = valid_df[valid_df[col_close] != 0]
@@ -54,25 +71,33 @@ def run_monitor():
         # 3. 提取數據並清理
         date = latest_data.get('日期', '未知日期')
         close_price = clean_value(latest_data.get(col_close))
-        vol_ratio = clean_value(latest_data.get(col_vol))
-        intent_score = clean_value(latest_data.get(col_intent))
-        status = str(latest_data.get(col_status, '無狀態'))
+        
+        # 確保 G, H, I 都有抓到數值，若沒抓到預設為 0.0
+        g_val = clean_value(latest_data.get(col_g)) if col_g else 0.0
+        h_val = clean_value(latest_data.get(col_h)) if col_h else 0.0
+        i_val = clean_value(latest_data.get(col_i)) if col_i else 0.0
+        
+        # 4. 把數值丟進我們的大腦計算狀態
+        calculated_status = get_vsa_status(g_val, h_val, i_val)
 
+        # 5. 組裝 LINE 推播報告
         report = (
             f"\n--- 🐊 詩織機器人 盤後診斷報告 ({date}) ---\n"
             f"標的：4533 協易機\n"
             f"今日收盤：{close_price} 元\n"
-            f"努力倍率：{vol_ratio:.2f}x\n"
-            f"意圖分數：{intent_score:.2f}\n"
-            f"目前狀態：{status}\n"
+            f"G(努力)：{g_val:.2f}x\n"
+            f"H(價格)：{h_val:.3f}\n"
+            f"I(意圖)：{i_val:.2f}\n"
+            f"大鱷狀態：{calculated_status}\n"
         )
 
+        # 加上原有的突破與止損提醒
         if close_price <= 30.0:
-            report += "🚨 注意：已跌破 30.0 元止損位！"
+            report += "\n🚨 注意：已跌破 30.0 元止損位！"
         elif close_price >= 33.8:
-            report += "🚀 突破：已站回 33.8 元關鍵地基！"
+            report += "\n🚀 突破：已站回 33.8 元關鍵地基！"
         else:
-            report += "☕ 觀察：目前在地基區間內震盪，繼續喝紅茶。"
+            report += "\n☕ 觀察：目前在地基區間內震盪，繼續喝紅茶。"
 
         print(report)
         send_line_message(report)
