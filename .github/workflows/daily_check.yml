@@ -16,15 +16,17 @@ jobs:
       - name: 📥 複製倉庫檔案
         uses: actions/checkout@v6
 
-      - name: 🐍 安裝 Python 環境
-        uses: actions/setup-python@v6
+      - name: 安裝 Python 環境
+        uses: actions/setup-python@v6 # 或是 v6
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
-      - name: 📦 安裝必要套件
-        run: pip install pandas requests
+      - name: 安裝必要套件
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: 🐊 執行 VSA 監工腳本
+      - name: 執行 VSA 監工腳本
         env:
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
