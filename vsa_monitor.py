@@ -32,7 +32,7 @@ def get_vsa_status(g, h, i):
     else:
         return "⚪ 【觀望】多空拉鋸，結構調整中"
 
-def analyze_stock(stock_id, stock_name, stop_loss, buy_point):
+def analyze_stock(stock_id, stock_name, stop_loss, buy_point, take_profit):
     """自動抓取並分析單檔股票"""
     try:
         # 1. 透過 Yahoo Finance 抓取過去 60 天的資料 (確保能算 50 日均量)
@@ -105,9 +105,10 @@ def run_monitor():
     ]
 
     final_report = f"\n--- 🐊 詩織機器人 盤後自動診斷 ---\n"
-    
+    # 在 run_monitor 函數的 for 迴圈裡面：
     for stock in watchlist:
-        result = analyze_stock(stock["id"], stock["name"], stock["stop"], stock["buy"])
+        # 修改這一行，把 stock["tp"] 傳進去：
+        result = analyze_stock(stock["id"], stock["name"], stock["stop"], stock["buy"], stock["tp"])
         final_report += f"\n{result}"
         final_report += "-" * 20
 
