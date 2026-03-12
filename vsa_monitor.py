@@ -52,11 +52,11 @@ def run_monitor():
     try:
         df = pd.read_csv(file_name, encoding='utf-8-sig', na_values=['#DIV/0!', '#N/A', '', ' '])
         
-        # 1. 抓取關鍵欄位 (新增 G, H, I 的抓取)
+        # 1. 抓取關鍵欄位 (修正關鍵字，以符合你 CSV 的表頭)
         col_close = find_column(df, '收盤價')
-        col_g = find_column(df, '努力') # G欄：對應 Excel 的努力倍率
-        col_h = find_column(df, '價格') # H欄：對應 Excel 的價差幅度
-        col_i = find_column(df, '意圖') # I欄：對應 Excel 的收盤位置
+        col_g = find_column(df, '努力') 
+        col_h = find_column(df, '價格') # ★ 請確認你的 CSV 表頭是叫「價差」還是「價格」
+        col_i = find_column(df, '意圖') # ★ 修正：從 '位置' 改成 '意圖'
         
         # 2. 過濾有效數據
         valid_df = df[df[col_close].notna()]
@@ -68,14 +68,18 @@ def run_monitor():
             
         latest_data = valid_df.iloc[-1]
         
-        # 3. 提取數據並清理
+# 3. 提取數據並清理
         date = latest_data.get('日期', '未知日期')
         close_price = clean_value(latest_data.get(col_close))
         
-        # 確保 G, H, I 都有抓到數值，若沒抓到預設為 0.0
         g_val = clean_value(latest_data.get(col_g)) if col_g else 0.0
         h_val = clean_value(latest_data.get(col_h)) if col_h else 0.0
         i_val = clean_value(latest_data.get(col_i)) if col_i else 0.0
+        
+        # ★★★ 關鍵除蟲手術：把百分比數字轉換回小數 ★★★
+        # 如果抓到的數字大於 1，或者它本來在 Excel 裡就是百分比顯示的，我們就除以 100
+        h_val = h_val / 100 
+        i_val = i_val / 100
         
         # 4. 把數值丟進我們的大腦計算狀態
         calculated_status = get_vsa_status(g_val, h_val, i_val)
